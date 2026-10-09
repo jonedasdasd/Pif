@@ -1,0 +1,47 @@
+name: Gerar APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Abrir o zip
+        run: unzip -q -o pif-da-mesa-app.zip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Compilar a interface
+        working-directory: pif-app/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Colocar a interface dentro do app
+        run: |
+          mkdir -p pif-app/android/app/src/main/assets/www
+          cp pif-app/web/dist/index.html pif-app/android/app/src/main/assets/www/index.html
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar o app
+        working-directory: pif-app/android
+        run: gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PifDaMesa-apk
+          path: pif-app/android/app/build/outputs/apk/debug/app-debug.apk
